@@ -104,7 +104,7 @@ void AzureKinectDevice::Shutdown()
 
 	if (Thread)
 	{
-		Thread->Shutdown();
+		delete Thread;
 		Thread = nullptr;
 	}
 
@@ -268,7 +268,9 @@ void AzureKinectDevice::InitializeBodies()
 
 void AzureKinectDevice::StartKinectThread()
 {
-	Thread = FAzureKinectThread::InitPolling(this);
+	if(Thread == nullptr) {
+		Thread = new FAzureKinectThread(this);
+	}
 }
 
 bool AzureKinectDevice::OnTick(float DeltaTime)
