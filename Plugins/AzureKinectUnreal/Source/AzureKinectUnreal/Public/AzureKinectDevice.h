@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "k4a/k4a.hpp"
+#include "k4arecord/playback.hpp"
 #include "AzureKinectThread.h"
 #include "AzureKinectBody.h"
 #include "Delegates/IDelegateInstance.h"
@@ -24,9 +25,10 @@ public:
 	AzureKinectDevice(int32 DeviceId, int32 TimeOut);
 	/** Destructor */
 	~AzureKinectDevice();
-
 	/** Initalizes the Azure kinect device with the given Depth Mode. */
 	bool Initialize(k4a_depth_mode_t DepthMode);
+	/** Initalizes the Azure kinect as playback with the given Filepath. */
+	bool Initialize(FString filepath);
 	/** Shuts down this device */
 	void Shutdown();
 
@@ -54,6 +56,8 @@ private:
 	k4a::device NativeKinectDevice;
 	/** The Id of this device. Default is 0. */
 	int32 DeviceId;
+	/** A handle to the native k4arecord playback. */
+	k4a::playback NativeKinectPlayback;
 	/** A handle to the native k4abt body tracker that is used to get the body frame and the skeleton joints data. */
 	k4abt::tracker NativeBodyTracker;
 	/** The timeout for the API calls. Default is 0, which means it is non-blocking. */

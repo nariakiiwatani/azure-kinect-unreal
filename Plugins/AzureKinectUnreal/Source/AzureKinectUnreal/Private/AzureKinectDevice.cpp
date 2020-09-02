@@ -8,12 +8,13 @@
 DEFINE_LOG_CATEGORY(AzureKinectDeviceLog);
 
 AzureKinectDevice::AzureKinectDevice() :
-	AzureKinectDevice(0, 0)
+	AzureKinectDevice(0, 100)
 {
 }
 
 AzureKinectDevice::AzureKinectDevice(int32 Id, int32 TimeOut) :
 	NativeKinectDevice(nullptr),
+	NativeKinectPlayback(nullptr),
 	DeviceId(Id),
 	NativeBodyTracker(nullptr),
 	TimeOutInMilliSecs(TimeOut),
@@ -46,6 +47,36 @@ bool AzureKinectDevice::Initialize(k4a_depth_mode_t DepthMode)
 
 		// Get the device calibration
 		k4a::calibration sensorCalibration = NativeKinectDevice.get_calibration(deviceConfig.depth_mode, deviceConfig.color_resolution);
+
+		// Create the Body tracker using the calibration
+		NativeBodyTracker = k4abt::tracker::create(sensorCalibration);
+	}
+	catch (k4a::error initError)
+	{
+		FString initErrorStr(initError.what());
+		UE_LOG(AzureKinectDeviceLog, Error, TEXT("Kinect device (id : %d) - Initialization Failed with error : %s"), DeviceId, *initErrorStr);
+		return false;
+	}
+
+	bIsInitialized = true;
+
+	InitializeBodies();
+	StartKinectThread();
+
+	TickHandle = FTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateRaw(this, &AzureKinectDevice::OnTick), TickInterval);
+
+	return true;
+}
+
+bool AzureKinectDevice::Initialize(FString filepath)
+{
+	try
+	{
+		// Open the Azure Kinect Device
+		NativeKinectPlayback = k4a::playback::open((const char*)TCHAR_TO_ANSI(*filepath));
+
+		// Get the device calibration
+		k4a::calibration sensorCalibration = NativeKinectPlayback.get_calibration();
 
 		// Create the Body tracker using the calibration
 		NativeBodyTracker = k4abt::tracker::create(sensorCalibration);
@@ -100,6 +131,13 @@ void AzureKinectDevice::Shutdown()
 		NativeKinectDevice = nullptr;
 		UE_LOG(AzureKinectDeviceLog, Warning, TEXT("KinectDevice Camera is Stopped and Closed"));
 	}
+
+	if (NativeKinectPlayback)
+	{
+		NativeKinectPlayback.close();
+		NativeKinectPlayback = nullptr;
+		UE_LOG(AzureKinectDeviceLog, Warning, TEXT("KinectDevice Playback is Closed"));
+	}
 }
 
 void AzureKinectDevice::CaptureBodyTrackingFrame()
@@ -110,9 +148,9 @@ void AzureKinectDevice::CaptureBodyTrackingFrame()
 		return;
 	}
 
-	if (!NativeKinectDevice)
+	if (!NativeKinectDevice && !NativeKinectPlayback)
 	{
-		UE_LOG(AzureKinectDeviceLog, Error, TEXT("Kinect device for capturing body tracking frame is Invalid!"));
+		UE_LOG(AzureKinectDeviceLog, Error, TEXT("Kinect device nor Kinect playback for capturing body tracking frame is Invalid!"));
 		return;
 	}
 
@@ -127,9 +165,15 @@ void AzureKinectDevice::CaptureBodyTrackingFrame()
 	{
 		// Capture a depth frame
 		k4a::capture sensorCapture = nullptr;
-		if (!NativeKinectDevice.get_capture(&sensorCapture, TimeOutInMilliSecsConverted))
+		if (NativeKinectDevice && !NativeKinectDevice.get_capture(&sensorCapture, TimeOutInMilliSecsConverted))
 		{
 			UE_CLOG(bShowAllLogs, AzureKinectDeviceLog, Error, TEXT("Kinect device get capture Timed Out!"));
+			return;
+		}
+
+		if (NativeKinectPlayback && !NativeKinectPlayback.get_next_capture(&sensorCapture))
+		{
+			UE_CLOG(bShowAllLogs, AzureKinectDeviceLog, Error, TEXT("Kinect playback get capture failed!"));
 			return;
 		}
 

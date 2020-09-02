@@ -75,6 +75,7 @@ public class AzureKinectUnreal : ModuleRules
 			new string[]
 			{
 				Path.Combine(azureKinectSensorSDKPath, "amd64", "lib", "k4a.lib"),
+				Path.Combine(azureKinectSensorSDKPath, "amd64", "lib", "k4arecord.lib"),
 				Path.Combine(azureKinectBodyTrackingSDKPath, "amd64", "lib", "k4abt.lib")
 			});
 

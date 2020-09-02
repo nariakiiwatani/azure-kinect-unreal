@@ -36,6 +36,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Azure Kinect", meta = (DisplayName = "Init Azure Kinect"))
 	static void InitDevice(int32 DeviceId = 0, EKinectDepthMode DepthMode = EKinectDepthMode::NFOV_UNBINNED, int32 TimeOutInMilliSecs = 0);
 
+	UFUNCTION(BlueprintCallable, Category = "Azure Kinect", meta = (DisplayName = "Load Azure Kinect Recorded Data"))
+	static void LoadFromFile(FString filename, int32 &DeviceId);
+
 	/** Shuts down the azure kinect device with the given device id. */
 	UFUNCTION(BlueprintCallable, Category = "Azure Kinect", meta = (DisplayName = "Shutdown Azure Kinect"))
 	static void ShutdownDevice(int32 DeviceId = 0);

@@ -54,6 +54,39 @@ void UAzureKinectManager::InitDevice(int32 DeviceId, EKinectDepthMode DepthMode,
 	}
 }
 
+void UAzureKinectManager::LoadFromFile(FString filename, int32 &DeviceId)
+{
+	if (!Instance)
+	{
+		Instance = NewObject<UAzureKinectManager>();
+		if (!Instance)
+		{
+			UE_LOG(AzureKinectLog, Error, TEXT("Could not create an instance for UAzureKinectManager"));
+			return;
+		}
+
+		Instance->AddToRoot();
+	}
+
+	FString filepath = FPaths::ConvertRelativePathToFull(filename);
+
+	AzureKinectDevice *KinectDevice = new AzureKinectDevice();
+	bool bIsInitialized = KinectDevice->Initialize(filepath);
+
+	if (bIsInitialized)
+	{
+		DeviceId = -(Instance->KinectDevicesById.Num()+1);
+		Instance->KinectDevicesById.Add(DeviceId, KinectDevice);
+		UE_LOG(AzureKinectLog, Warning, TEXT("Kinect playback (file : %s, id : %d) added to TMap : Count : %d"), *filepath, DeviceId, Instance->KinectDevicesById.Num());
+
+	}
+	else
+	{
+		UE_LOG(AzureKinectLog, Error, TEXT("Kinect playback (file : %s) initialization Failed, so cleaning up."), *filepath);
+		KinectDevice->Shutdown();
+	}
+}
+
 void UAzureKinectManager::ShutdownDevice(int32 DeviceId)
 {
 	if (!Instance)
